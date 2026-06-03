@@ -13,7 +13,13 @@ Arduino C++. Dataset RSSI di-embed (`synced_bob.h`) → tidak perlu filesystem/S
 |---|---|
 | `bob_esp32/bob_esp32.ino` | sketch utama (WiFi, TCP server, alur protokol) |
 | `bob_esp32/skg.h` | 4 langkah SKG di C++ (SHA3, quantisasi, Cascade, kunci) |
-| `bob_esp32/synced_bob.h` | dataset RSSI Bob (1164 sampel, embedded) |
+| `bob_esp32/synced_bob.h` | dataset RSSI Bob (1164 sampel, embedded sebagai C array) |
+| `synced_bob.csv` | dataset RSSI Bob mentah (sumber, mudah dibaca) |
+| `gen_header.py` | regenerasi `synced_bob.h` dari `synced_bob.csv` |
+
+> **Catatan RSSI:** sistem ini berbasis RSSI. `synced_bob.csv` = data mentah; `synced_bob.h` =
+> data sama yang di-embed ke firmware (ESP32 Arduino tak baca file flash dengan mudah).
+> Ganti dataset: ubah `synced_bob.csv` lalu jalankan `python gen_header.py`.
 
 ## Konfigurasi (di `bob_esp32.ino`)
 ```cpp
