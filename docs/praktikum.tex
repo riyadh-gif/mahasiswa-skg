@@ -1,0 +1,162 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\definecolor{kw}{rgb}{0.0,0.3,0.6}
+\definecolor{cmt}{rgb}{0.3,0.5,0.3}
+\lstset{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{kw}\bfseries,
+  commentstyle=\color{cmt}\itshape,
+  breaklines=true,
+  frame=single,
+  framesep=4pt,
+  showstringspaces=false,
+  columns=fullflexible,
+}
+
+\title{\textbf{Praktikum: Secret-Key-Generation (SKG) Sederhana\\ Alice (Laptop) $\leftrightarrow$ Bob (ESP32)}}
+\author{Modul Praktikum}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Tujuan}
+Mahasiswa mampu:
+\begin{enumerate}[noitemsep]
+  \item Memahami prinsip \emph{physical-layer secret key generation} dari sinyal RSSI.
+  \item Menjalankan protokol SKG antara laptop (Alice) dan ESP32 (Bob).
+  \item Membuktikan kedua perangkat menghasilkan \textbf{kunci yang sama} tanpa mengirim kunci.
+\end{enumerate}
+
+\section{Konsep Singkat}
+Dua perangkat mengukur RSSI pada kanal WiFi yang sama. Karena resiprositas kanal, hasil
+pengukuran berkorelasi. Dari korelasi ini kunci diekstraksi melalui empat langkah:
+
+\begin{longtable}{p{3.2cm} p{10.5cm}}
+\toprule
+\textbf{Langkah} & \textbf{Penjelasan} \\
+\midrule
+1. Quantisasi guard-band & RSSI diubah menjadi bit. Sampel ambigu di pita $\mu \pm \alpha\sigma$ dibuang. \\
+2. Sifting & Tukar \emph{posisi} sampel yang dipakai, ambil irisan. Posisi aman dibagi publik. \\
+3. Rekonsiliasi (Cascade) & Perbaiki bit yang berbeda memakai \emph{parity} + \emph{binary search} sampai bit identik. \\
+4. Privacy amplification & Kunci akhir $=$ SHA3-256(bit). Menghapus informasi parity yang sempat bocor. \\
+\bottomrule
+\end{longtable}
+
+\noindent Verifikasi akhir: kedua sisi menukar $H(H(\text{kunci}))$ untuk mengecek \textbf{MATCH}.
+
+\paragraph{Keamanan.} Yang melewati kanal publik hanya posisi indeks dan parity, bukan nilai
+RSSI. Penyadap (Eve) tidak memiliki nilai RSSI, dan privacy amplification menghapus parity
+yang bocor, sehingga Eve tidak dapat menurunkan kunci.
+
+\section{Alat dan Bahan}
+\begin{itemize}[noitemsep]
+  \item \textbf{Laptop (Alice):} Python 3.8+ (tanpa pustaka tambahan).
+  \item \textbf{ESP32 (Bob):} Arduino IDE atau \texttt{arduino-cli}, board package \textbf{esp32}, kabel USB.
+  \item \textbf{Jaringan:} satu hotspot WiFi \textbf{2.4 GHz} untuk laptop dan ESP32
+        (disarankan hotspot HP; hindari WiFi kampus karena \emph{client isolation}).
+\end{itemize}
+
+\section{Struktur Berkas}
+\begin{lstlisting}
+mahasiswa-skg/
+  alice/   (laptop)  alice.py, skg_common.py, sha3_256.py, pcg32.py, net.py, synced_alice.csv
+  bob/     (ESP32)   bob_esp32/bob_esp32.ino, skg.h, synced_bob.h
+  docs/              praktikum.tex
+\end{lstlisting}
+
+\section{Langkah Praktikum}
+
+\subsection{A. Siapkan Jaringan}
+\begin{enumerate}[noitemsep]
+  \item Nyalakan hotspot HP (2.4 GHz). Catat SSID dan password.
+  \item Sambungkan laptop ke hotspot tersebut.
+\end{enumerate}
+
+\subsection{B. Bob (ESP32)}
+\begin{enumerate}[noitemsep]
+  \item Tambahkan URL board (Arduino IDE $\to$ Preferences):
+  \begin{lstlisting}
+https://espressif.github.io/arduino-esp32/package_esp32_index.json
+  \end{lstlisting}
+  \item Boards Manager $\to$ install \textbf{esp32}.
+  \item Buka \texttt{bob/bob\_esp32/bob\_esp32.ino}, isi WiFi:
+  \begin{lstlisting}[language=C++]
+const char* WIFI_SSID = "NAMA_HOTSPOT";
+const char* WIFI_PASS = "PASSWORD_HOTSPOT";
+const double ALPHA    = 1.0;   // harus sama dengan alice.py
+  \end{lstlisting}
+  \item Pilih Board \textbf{ESP32 Dev Module} dan Port, klik \textbf{Upload}.
+  \item Buka Serial Monitor (115200), catat \texttt{IP ESP32}.
+\end{enumerate}
+
+\noindent Alternatif \texttt{arduino-cli}:
+\begin{lstlisting}
+arduino-cli core install esp32:esp32
+arduino-cli compile --fqbn esp32:esp32:esp32 bob/bob_esp32
+arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM_ESP32 bob/bob_esp32
+arduino-cli monitor -p COM_ESP32 -c baudrate=115200
+\end{lstlisting}
+
+\subsection{C. Alice (Laptop)}
+Edit \texttt{alice/alice.py}:
+\begin{lstlisting}[language=Python]
+BOB_IP = "192.168.x.y"   # IP ESP32 dari Serial Monitor
+ALPHA  = 1.0             # harus sama dengan bob_esp32.ino
+\end{lstlisting}
+
+\subsection{D. Jalankan}
+Pastikan ESP32 sudah ``menunggu Alice''. Lalu di laptop:
+\begin{lstlisting}
+cd alice
+python alice.py
+\end{lstlisting}
+
+\subsection{E. Hasil yang Benar}
+\begin{lstlisting}
+# Laptop (Alice)
+Sifting: posisi bersama = 123
+Kunci Alice : 4c032a3015f75237...067ed8
+Status      : MATCH
+
+# Serial Monitor (Bob / ESP32)
+Rekonsiliasi selesai, query parity = 88
+STATUS: MATCH
+Kunci Bob: 4c032a3015f75237...067ed8
+\end{lstlisting}
+\textbf{Kunci Alice $=$ Kunci Bob $\Rightarrow$ praktikum berhasil.}
+
+\section{Troubleshooting}
+\begin{longtable}{p{4.8cm} p{8.6cm}}
+\toprule
+\textbf{Gejala} & \textbf{Solusi} \\
+\midrule
+ESP32 cetak titik terus & WiFi salah / 5 GHz. Cek SSID/pass, pakai hotspot 2.4 GHz. \\
+Alice \texttt{Gagal connect} & IP ESP32 salah atau beda WiFi. Samakan jaringan, perbarui \texttt{BOB\_IP}. \\
+Alice menggantung lalu gagal & \emph{client isolation}. Gunakan hotspot HP. \\
+\texttt{STATUS: RETRY} & Kanal bising. Naikkan \texttt{ALPHA} (mis. 1.2) di kedua sisi. \\
+Port COM tak terbuka & Tutup Serial Monitor sebelum upload. \\
+\bottomrule
+\end{longtable}
+
+\section{Pertanyaan Diskusi}
+\begin{enumerate}[noitemsep]
+  \item Mengapa menukar \emph{posisi} indeks aman, tetapi menukar nilai bit tidak?
+  \item Apa pengaruh menaikkan $\alpha$ terhadap jumlah bit dan BER?
+  \item Mengapa privacy amplification (SHA3) diperlukan setelah rekonsiliasi?
+  \item Hitung entropi bersih bila bit bersama $=123$ dan parity bocor $=88$.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,24 @@
+# verifikasi internal (bukan untuk mahasiswa)
+.host_test/
+
+# Python
+__pycache__/
+*.pyc
+
+# Arduino build
+build/
+*.bin
+*.elf
+
+# LaTeX aux
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# OS
+Thumbs.db
+.DS_Store
