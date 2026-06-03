@@ -1,8 +1,15 @@
 # Praktikum SKG — Secret-Key-Generation Sederhana (Alice ↔ Bob)
 
+![License](https://img.shields.io/badge/license-MIT-green)
+![Platform](https://img.shields.io/badge/perangkat-ESP32-blue)
+![Lang](https://img.shields.io/badge/bahasa-Python%20%7C%20C%2B%2B-orange)
+![Status](https://img.shields.io/badge/status-teruji%20MATCH-brightgreen)
+
 Dua perangkat mengukur sinyal WiFi (RSSI) kanal yang sama, lalu **menghasilkan kunci rahasia
 yang identik tanpa pernah mengirim kunci itu**. Eve (penyadap) tidak bisa menurunkan kunci
 karena yang lewat kanal publik hanya posisi indeks + parity, bukan nilai RSSI.
+
+![Alur protokol SKG](docs/diagram.png)
 
 - **Alice** = laptop (Python)
 - **Bob** = ESP32 (Arduino C++)
