@@ -50,7 +50,16 @@ def main():
     hh = skg.sha3_256_hex(key)              # H(H(bits)) untuk verifikasi
     link.sendline(hh)
     status = link.recvline()
+
+    # 4. (MODE DEMO) terima kunci Bob untuk ditampilkan & dibandingkan langsung.
+    #    PERINGATAN: di SKG asli kunci TIDAK PERNAH dikirim lewat jaringan (Eve bisa
+    #    menyadap). Saat status MATCH, kunci Bob == kunci Alice -> hash sudah membuktikan.
+    #    Pengiriman ini HANYA untuk demo/verifikasi visual mahasiswa.
+    bob_key = link.recvline()
+
     print("Kunci Alice :", key)
+    print("Kunci Bob   :", bob_key)
+    print("Sama?       :", "YA" if bob_key == key else "TIDAK")
     print("Status      :", status)
     link.close()
 

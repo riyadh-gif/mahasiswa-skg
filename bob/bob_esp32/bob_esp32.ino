@@ -92,6 +92,11 @@ void runSKG(WiFiClient client){
   String hh_alice = recvline(client);
   std::string status = (skg::sha3_256_hex(key) == std::string(hh_alice.c_str())) ? "MATCH" : "RETRY";
   sendline(client, status);
+
+  // (MODE DEMO) kirim kunci Bob agar Alice bisa menampilkan & membandingkan langsung.
+  // PERINGATAN: SKG asli TIDAK PERNAH mengirim kunci (Eve bisa menyadap). Hanya untuk demo.
+  sendline(client, key);
+
   Serial.printf("STATUS: %s\n", status.c_str());
   Serial.printf("Kunci Bob: %s\n", key.c_str());
 }
