@@ -125,6 +125,8 @@ Laptop:
 ```
 Sifting: posisi bersama = 123
 Kunci Alice : 4c032a3015f75237...067ed8
+Kunci Bob   : 4c032a3015f75237...067ed8
+Sama?       : YA
 Status      : MATCH
 ```
 Serial Monitor ESP32:

@@ -36,6 +36,8 @@ python alice.py
 Alice: N=1164, kept(quantisasi)=300
 Sifting: posisi bersama = 123
 Kunci Alice : 4c032a3015f75237aafbf66bd279aaaab4fa7b73d64291ec15aa31705e067ed8
+Kunci Bob   : 4c032a3015f75237aafbf66bd279aaaab4fa7b73d64291ec15aa31705e067ed8
+Sama?       : YA
 Status      : MATCH
 ```
 
