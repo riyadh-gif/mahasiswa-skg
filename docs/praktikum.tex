@@ -53,7 +53,7 @@ pengukuran berkorelasi. Dari korelasi ini kunci diekstraksi melalui empat langka
 1. Quantisasi guard-band & RSSI diubah menjadi bit. Sampel ambigu di pita $\mu \pm \alpha\sigma$ dibuang. \\
 2. Sifting & Tukar \emph{posisi} sampel yang dipakai, ambil irisan. Posisi aman dibagi publik. \\
 3. Rekonsiliasi (Cascade) & Perbaiki bit yang berbeda memakai \emph{parity} + \emph{binary search} sampai bit identik. \\
-4. Privacy amplification & Kunci akhir $=$ SHA3-256(bit). Menghapus informasi parity yang sempat bocor. \\
+4. Privacy amplification & Kunci akhir $=$ SHA-1(bit). Menghapus informasi parity yang sempat bocor. \\
 \bottomrule
 \end{longtable}
 
@@ -88,7 +88,7 @@ pengukuran berkorelasi. Dari korelasi ini kunci diekstraksi melalui empat langka
 % verification
 \draw[msg] ($(a0)+(0,-4.9)$) -- node[above]{$H(H(\text{kunci}))$} ($(b0)+(0,-4.9)$);
 \draw[msg] ($(b0)+(0,-5.5)$) -- node[above]{MATCH / RETRY} ($(a0)+(0,-5.5)$);
-\node[font=\scriptsize\itshape,anchor=east] at ($(a0)+(-0.2,-6.0)$) {4. kunci = SHA3(bit)};
+\node[font=\scriptsize\itshape,anchor=east] at ($(a0)+(-0.2,-6.0)$) {4. kunci = SHA-1(bit)};
 \end{tikzpicture}
 \caption{Alur protokol SKG: yang dikirim hanya posisi indeks dan parity, bukan nilai RSSI.}
 \end{figure}
@@ -108,8 +108,9 @@ yang bocor, sehingga Eve tidak dapat menurunkan kunci.
 \section{Struktur Berkas}
 \begin{lstlisting}
 mahasiswa-skg/
-  alice/   (laptop)  alice.py, skg_common.py, sha3_256.py, pcg32.py, net.py, synced_alice.csv
-  bob/     (ESP32)   bob_esp32/bob_esp32.ino, skg.h, synced_bob.h
+  kelompokN/
+    alice/   (laptop)  alice.py, skg_common.py, pcg32.py, net.py, alice.csv
+    bob/     (ESP32)   bob_esp32/{bob_esp32.ino, skg.h, synced_bob.h}, bob.csv
   docs/              praktikum.tex
 \end{lstlisting}
 
@@ -128,7 +129,7 @@ mahasiswa-skg/
 https://espressif.github.io/arduino-esp32/package_esp32_index.json
   \end{lstlisting}
   \item Boards Manager $\to$ install \textbf{esp32}.
-  \item Buka \texttt{bob/bob\_esp32/bob\_esp32.ino}, isi WiFi:
+  \item Buka \texttt{kelompokN/bob/bob\_esp32/bob\_esp32.ino}, isi WiFi:
   \begin{lstlisting}[language=C++]
 const char* WIFI_SSID = "NAMA_HOTSPOT";
 const char* WIFI_PASS = "PASSWORD_HOTSPOT";
@@ -141,13 +142,13 @@ const double ALPHA    = 1.0;   // harus sama dengan alice.py
 \noindent Alternatif \texttt{arduino-cli}:
 \begin{lstlisting}
 arduino-cli core install esp32:esp32
-arduino-cli compile --fqbn esp32:esp32:esp32 bob/bob_esp32
-arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM_ESP32 bob/bob_esp32
+arduino-cli compile --fqbn esp32:esp32:esp32 kelompokN/bob/bob_esp32
+arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM_ESP32 kelompokN/bob/bob_esp32
 arduino-cli monitor -p COM_ESP32 -c baudrate=115200
 \end{lstlisting}
 
 \subsection{C. Alice (Laptop)}
-Edit \texttt{alice/alice.py}:
+Edit \texttt{kelompokN/alice/alice.py}:
 \begin{lstlisting}[language=Python]
 BOB_IP = "192.168.x.y"   # IP ESP32 dari Serial Monitor
 ALPHA  = 1.0             # harus sama dengan bob_esp32.ino
@@ -162,17 +163,17 @@ python alice.py
 
 \subsection{E. Hasil yang Benar}
 \begin{lstlisting}
-# Laptop (Alice)
+# Laptop (Alice) -- contoh kelompok 1 (Aulia skenario 1)
 Sifting: posisi bersama = 123
-Kunci Alice : 4c032a3015f75237...067ed8
-Kunci Bob   : 4c032a3015f75237...067ed8
+Kunci Alice : 38ddaa94b772d15a2bbeca1075a3a41a031b23ac
+Kunci Bob   : 38ddaa94b772d15a2bbeca1075a3a41a031b23ac
 Sama?       : YA
 Status      : MATCH
 
 # Serial Monitor (Bob / ESP32)
 Rekonsiliasi selesai, query parity = 88
 STATUS: MATCH
-Kunci Bob: 4c032a3015f75237...067ed8
+Kunci Bob: 38ddaa94b772d15a2bbeca1075a3a41a031b23ac
 \end{lstlisting}
 \textbf{Kunci Alice $=$ Kunci Bob $\Rightarrow$ praktikum berhasil.}
 
@@ -193,7 +194,7 @@ Port COM tak terbuka & Tutup Serial Monitor sebelum upload. \\
 \begin{enumerate}[noitemsep]
   \item Mengapa menukar \emph{posisi} indeks aman, tetapi menukar nilai bit tidak?
   \item Apa pengaruh menaikkan $\alpha$ terhadap jumlah bit dan BER?
-  \item Mengapa privacy amplification (SHA3) diperlukan setelah rekonsiliasi?
+  \item Mengapa privacy amplification (SHA-1) diperlukan setelah rekonsiliasi?
   \item Hitung entropi bersih bila bit bersama $=123$ dan parity bocor $=88$.
 \end{enumerate}
 

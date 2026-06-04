@@ -7,7 +7,7 @@
  *   1. Quantisasi guard-band RSSI -> bit
  *   2. Sifting: tukar indeks, ambil irisan posisi
  *   3. Rekonsiliasi Cascade: koreksi bit agar identik Alice
- *   4. Privacy amplification: kunci = SHA3-256(bit)
+ *   4. Privacy amplification: kunci = SHA-1(bit)
  *   5. Verifikasi H(H(kunci)) -> MATCH/RETRY
  */
 #include <WiFi.h>
@@ -90,7 +90,7 @@ void runSKG(WiFiClient client){
   // 4. kunci + verifikasi
   std::string key = skg::derive_key(bits_b);
   String hh_alice = recvline(client);
-  std::string status = (skg::sha3_256_hex(key) == std::string(hh_alice.c_str())) ? "MATCH" : "RETRY";
+  std::string status = (skg::sha1_hex(key) == std::string(hh_alice.c_str())) ? "MATCH" : "RETRY";
   sendline(client, status);
 
   // (MODE DEMO) kirim kunci Bob agar Alice bisa menampilkan & membandingkan langsung.

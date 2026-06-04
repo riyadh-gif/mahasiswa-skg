@@ -7,7 +7,7 @@ import net
 PORT = 6000
 BOB_IP = "GANTI_IP_ESP32"   # IP ESP32 (lihat Serial Monitor Arduino), mis. 192.168.100.124
 ALPHA = 1.0                  # guard band; HARUS sama dgn ALPHA di bob_esp32.ino
-CSV = "synced_alice.csv"     # dataset Alice (di folder ini)
+CSV = "alice.csv"            # dataset Alice (di folder ini)
 
 
 def load_rssi(path):
@@ -47,7 +47,7 @@ def main():
 
     # 3. KUNCI + verifikasi
     key = skg.derive_key(bits_a)
-    hh = skg.sha3_256_hex(key)              # H(H(bits)) untuk verifikasi
+    hh = skg.sha1_hex(key)                  # H(H(bits)) untuk verifikasi
     link.sendline(hh)
     status = link.recvline()
 

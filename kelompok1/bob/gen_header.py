@@ -1,8 +1,8 @@
-# Regenerasi synced_bob.h dari synced_bob.csv.
+# Regenerasi synced_bob.h dari bob.csv.
 # Pakai: python gen_header.py
 # Dataset RSSI di-embed jadi C array supaya ESP32 (Arduino) tak perlu filesystem.
 
-SRC = "synced_bob.csv"
+SRC = "bob.csv"
 OUT = "bob_esp32/synced_bob.h"
 
 vals = []

@@ -1,5 +1,6 @@
 // SKG core (C++11). Dipakai sketch ESP32 (bob_esp32.ino) dan host test (g++).
-// Hasil SHA3-256 identik dgn Python hashlib -> kunci ESP32 == kunci Alice (Python).
+// Hasil SHA-1 identik dgn Python hashlib.sha1 -> kunci ESP32 == kunci Alice (Python).
+// CATATAN: SHA-1 deprecated/rawan kolusi. Dipakai untuk tujuan ajar, bukan keamanan produksi.
 #ifndef SKG_H
 #define SKG_H
 #include <stdint.h>
@@ -13,70 +14,38 @@
 
 namespace skg {
 
-// ---------------- SHA3-256 (Keccak) ----------------
-static const uint64_t _RC[24] = {
-  0x0000000000000001ULL,0x0000000000008082ULL,0x800000000000808AULL,
-  0x8000000080008000ULL,0x000000000000808BULL,0x0000000080000001ULL,
-  0x8000000080008081ULL,0x8000000000008009ULL,0x000000000000008AULL,
-  0x0000000000000088ULL,0x0000000080008009ULL,0x000000008000000AULL,
-  0x000000008000808BULL,0x800000000000008BULL,0x8000000000008089ULL,
-  0x8000000000008003ULL,0x8000000000008002ULL,0x8000000000000080ULL,
-  0x000000000000800AULL,0x800000008000000AULL,0x8000000080008081ULL,
-  0x8000000000008080ULL,0x0000000080000001ULL,0x8000000080008008ULL };
-static const int _ROTC[24] = {1,3,6,10,15,21,28,36,45,55,2,14,27,41,56,8,25,43,62,18,39,61,20,44};
-static const int _PILN[24] = {10,7,11,17,18,3,5,16,8,21,24,4,15,23,19,13,12,2,20,14,22,9,6,1};
+// ---------------- SHA-1 ----------------
+inline uint32_t _rotl32(uint32_t x, int n){ return (x << n) | (x >> (32 - n)); }
 
-inline uint64_t _rotl(uint64_t x, int n){ return (x << n) | (x >> (64 - n)); }
-
-inline void _keccak_f(uint64_t st[25]){
-  for(int r=0;r<24;r++){
-    uint64_t bc[5];
-    for(int i=0;i<5;i++) bc[i]=st[i]^st[i+5]^st[i+10]^st[i+15]^st[i+20];
-    for(int i=0;i<5;i++){
-      uint64_t t=bc[(i+4)%5]^_rotl(bc[(i+1)%5],1);
-      for(int j=0;j<25;j+=5) st[j+i]^=t;
-    }
-    uint64_t t=st[1];
-    for(int i=0;i<24;i++){ int j=_PILN[i]; uint64_t tmp=st[j]; st[j]=_rotl(t,_ROTC[i]); t=tmp; }
-    for(int j=0;j<25;j+=5){
-      uint64_t row[5];
-      for(int i=0;i<5;i++) row[i]=st[j+i];
-      for(int i=0;i<5;i++) st[j+i]=row[i]^((~row[(i+1)%5])&row[(i+2)%5]);
-    }
-    st[0]^=_RC[r];
-  }
-}
-
-inline std::vector<uint8_t> sha3_256(const std::string& data){
-  const int RATE=136;
+inline std::string sha1_hex(const std::string& data){
+  uint32_t h0=0x67452301, h1=0xEFCDAB89, h2=0x98BADCFE, h3=0x10325476, h4=0xC3D2E1F0;
   std::vector<uint8_t> msg(data.begin(), data.end());
-  msg.push_back(0x06);
-  while(msg.size()%RATE!=0) msg.push_back(0x00);
-  msg.back()^=0x80;
-  uint64_t st[25]; for(int i=0;i<25;i++) st[i]=0;
-  for(size_t off=0; off<msg.size(); off+=RATE){
-    for(int i=0;i<RATE/8;i++){
-      uint64_t lane=0;
-      for(int b=0;b<8;b++) lane |= (uint64_t)msg[off+i*8+b] << (8*b);
-      st[i]^=lane;
+  uint64_t ml = (uint64_t)data.size() * 8;
+  msg.push_back(0x80);
+  while(msg.size() % 64 != 56) msg.push_back(0x00);
+  for(int i=7;i>=0;i--) msg.push_back((uint8_t)(ml >> (8*i)));
+  for(size_t off=0; off<msg.size(); off+=64){
+    uint32_t w[80];
+    for(int i=0;i<16;i++)
+      w[i] = ((uint32_t)msg[off+i*4]<<24)|((uint32_t)msg[off+i*4+1]<<16)
+           | ((uint32_t)msg[off+i*4+2]<<8)|((uint32_t)msg[off+i*4+3]);
+    for(int i=16;i<80;i++) w[i]=_rotl32(w[i-3]^w[i-8]^w[i-14]^w[i-16],1);
+    uint32_t a=h0,b=h1,c=h2,d=h3,e=h4;
+    for(int i=0;i<80;i++){
+      uint32_t f,k;
+      if(i<20){ f=(b&c)|((~b)&d); k=0x5A827999; }
+      else if(i<40){ f=b^c^d; k=0x6ED9EBA1; }
+      else if(i<60){ f=(b&c)|(b&d)|(c&d); k=0x8F1BBCDC; }
+      else { f=b^c^d; k=0xCA62C1D6; }
+      uint32_t tmp=_rotl32(a,5)+f+e+k+w[i];
+      e=d; d=c; c=_rotl32(b,30); b=a; a=tmp;
     }
-    _keccak_f(st);
+    h0+=a; h1+=b; h2+=c; h3+=d; h4+=e;
   }
-  std::vector<uint8_t> out;
-  while(out.size()<32){
-    for(int i=0;i<RATE/8 && out.size()<32;i++)
-      for(int b=0;b<8 && out.size()<32;b++) out.push_back((uint8_t)(st[i]>>(8*b)));
-    if(out.size()<32) _keccak_f(st);
-  }
-  out.resize(32);
-  return out;
-}
-
-inline std::string sha3_256_hex(const std::string& data){
-  std::vector<uint8_t> d=sha3_256(data);
+  uint32_t hs[5]={h0,h1,h2,h3,h4};
   static const char* hx="0123456789abcdef";
-  std::string s; s.reserve(64);
-  for(size_t i=0;i<d.size();i++){ s.push_back(hx[d[i]>>4]); s.push_back(hx[d[i]&15]); }
+  std::string s; s.reserve(40);
+  for(int j=0;j<5;j++) for(int i=7;i>=0;i--) s.push_back(hx[(hs[j]>>(4*i))&0xF]);
   return s;
 }
 
@@ -161,7 +130,7 @@ inline int cascade_correct(std::vector<int>& bits_b, std::function<int(const std
 inline std::string derive_key(const std::vector<int>& bits){
   std::string s; s.reserve(bits.size());
   for(size_t i=0;i<bits.size();i++) s.push_back(bits[i]?'1':'0');
-  return sha3_256_hex(s);
+  return sha1_hex(s);
 }
 
 } // namespace skg

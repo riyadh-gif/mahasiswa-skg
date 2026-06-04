@@ -3,18 +3,32 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/perangkat-ESP32-blue)
 ![Lang](https://img.shields.io/badge/bahasa-Python%20%7C%20C%2B%2B-orange)
+![Hash](https://img.shields.io/badge/hash-SHA--1-yellow)
 ![Status](https://img.shields.io/badge/status-teruji%20MATCH-brightgreen)
 
 Dua perangkat mengukur sinyal WiFi (RSSI) kanal yang sama, lalu **menghasilkan kunci rahasia
 yang identik tanpa pernah mengirim kunci itu**. Eve (penyadap) tidak bisa menurunkan kunci
 karena yang lewat kanal publik hanya posisi indeks + parity, bukan nilai RSSI.
 
-![Alur protokol SKG](docs/diagram.png)
-
 - **Alice** = laptop (Python)
 - **Bob** = ESP32 (Arduino C++)
 
-> Status: **teruji jalan**. Alice (Python) dan Bob (ESP32) menghasilkan kunci sama, `STATUS: MATCH`.
+![Alur protokol SKG](docs/diagram.png)
+
+---
+
+## Pembagian kelompok (dataset berbeda tiap kelompok)
+
+Tiap kelompok memakai **pasangan RSSI Alice+Bob berbeda** dan menghasilkan **kunci berbeda**.
+
+| Kelompok | Dataset | Sampel | Bit bersama | Kunci (SHA-1) |
+|---|---|---|---|---|
+| **1** | Aulia skenario 1 | 1164 | 123 | `38ddaa94b772d15a2bbeca1075a3a41a031b23ac` |
+| **2** | Aulia skenario 2 | 1091 | 227 | `6d8a6e5796d7ccebb2c45d49fbca6789d7a5d1ff` |
+| **3** | Mita skenario 1  | 1177 | 185 | `55926ef8eb8588dbd5fa32c158198fb3029d1525` |
+| **4** | Mita skenario 2  | 1180 | 243 | `a5e339f71c616fa16b7d48d2db3a035eee43fc2d` |
+
+Tiap kelompok cukup buka folder `kelompokN/` masing-masing — sudah lengkap (kode + dataset).
 
 ---
 
@@ -25,25 +39,20 @@ karena yang lewat kanal publik hanya posisi indeks + parity, bukan nilai RSSI.
 | 1. **Quantisasi guard-band** | RSSI → bit (0/1). Sampel ambigu di tengah (mean ± α·std) dibuang. |
 | 2. **Sifting** | Tukar **posisi** sampel yang dipakai; ambil irisan. (posisi = aman dibagi) |
 | 3. **Rekonsiliasi (Cascade)** | Perbaiki bit yang beda pakai parity + binary search → bit jadi identik. |
-| 4. **Privacy amplification** | Kunci = SHA3-256(bit). Menghapus info parity yang sempat bocor. |
+| 4. **Privacy amplification** | Kunci = **SHA-1**(bit). Menghapus info parity yang sempat bocor. |
 
-Akhirnya kedua sisi tukar `H(H(kunci))` untuk verifikasi → **MATCH** atau **RETRY**.
+Verifikasi akhir: tukar `H(H(kunci))` → **MATCH** / **RETRY**.
+
+> Catatan: SHA-1 dipakai untuk tujuan ajar/perbandingan. SHA-1 sudah deprecated (rawan kolusi);
+> untuk keamanan nyata gunakan SHA-2/SHA-3.
 
 ---
 
 ## 2. Alat yang dibutuhkan
 
-**Laptop (Alice)**
-- Python 3.8+ (tanpa library tambahan — pakai pustaka standar saja)
-
-**ESP32 (Bob)**
-- **Arduino IDE** (atau `arduino-cli`)
-- Board package **esp32** by Espressif
-- Kabel USB data + driver USB-serial (CP210x / CH340)
-
-**Jaringan**
-- Satu WiFi/hotspot 2.4 GHz untuk laptop **dan** ESP32 (ESP32 klasik tidak support 5 GHz).
-- Disarankan **hotspot HP**. Hindari WiFi kampus (sering ada *client isolation* / login enterprise).
+**Laptop (Alice):** Python 3.8+ (tanpa library tambahan).
+**ESP32 (Bob):** Arduino IDE / `arduino-cli`, board package **esp32**, kabel USB.
+**Jaringan:** satu WiFi/hotspot **2.4 GHz** untuk laptop + ESP32 (hindari WiFi kampus / 5 GHz).
 
 ---
 
@@ -51,113 +60,72 @@ Akhirnya kedua sisi tukar `H(H(kunci))` untuk verifikasi → **MATCH** atau **RE
 
 ```
 mahasiswa-skg/
-├── alice/                  # dijalankan di LAPTOP
-│   ├── alice.py            # program utama Alice
-│   ├── skg_common.py       # 4 langkah SKG (quantisasi, sifting, cascade, kunci)
-│   ├── sha3_256.py         # SHA3-256
-│   ├── pcg32.py            # PRNG permutasi
-│   ├── net.py              # koneksi TCP
-│   └── synced_alice.csv    # dataset RSSI Alice
-├── bob/                    # diunggah ke ESP32
-│   ├── bob_esp32/
-│   │   ├── bob_esp32.ino   # sketch Arduino
-│   │   ├── skg.h           # 4 langkah SKG (C++)
-│   │   └── synced_bob.h    # dataset RSSI Bob (embedded)
+├── kelompok1/  (Aulia skenario 1)
+│   ├── alice/  alice.py, skg_common.py, pcg32.py, net.py, alice.csv
+│   ├── bob/    bob_esp32/{bob_esp32.ino, skg.h, synced_bob.h}, bob.csv, gen_header.py
 │   └── README.md
-├── alice/README.md
-└── docs/praktikum.tex      # panduan praktikum (LaTeX → PDF)
+├── kelompok2/ ...  kelompok3/ ...  kelompok4/ ...
+├── docs/       praktikum.tex/pdf, diagram.png
+├── tools/      template/ (kode sumber), build_groups.py (regen folder kelompok)
+├── LICENSE
+└── README.md
 ```
 
 ---
 
-## 4. Langkah praktikum
+## 4. Langkah praktikum (per kelompok)
 
-### A. Siapkan jaringan
-1. Nyalakan **hotspot HP** (2.4 GHz). Catat nama (SSID) + password.
-2. Sambungkan **laptop** ke hotspot itu.
+### A. Jaringan
+Nyalakan hotspot HP (2.4 GHz). Sambungkan laptop ke hotspot itu.
 
-### B. Siapkan Bob (ESP32) — Arduino IDE
-1. Install board esp32: Arduino IDE → *File → Preferences → Additional Boards Manager URLs*, isi:
-   ```
-   https://espressif.github.io/arduino-esp32/package_esp32_index.json
-   ```
-   Lalu *Tools → Board → Boards Manager*, cari **esp32**, install.
-2. Buka `bob/bob_esp32/bob_esp32.ino`.
-3. Isi WiFi di bagian atas sketch:
+### B. Bob (ESP32) — Arduino IDE
+1. Tambah board URL (Preferences): `https://espressif.github.io/arduino-esp32/package_esp32_index.json`
+   lalu Boards Manager → install **esp32**.
+2. Buka `kelompokN/bob/bob_esp32/bob_esp32.ino`, isi WiFi:
    ```cpp
    const char* WIFI_SSID = "NAMA_HOTSPOT";
    const char* WIFI_PASS = "PASSWORD_HOTSPOT";
    ```
-4. *Tools → Board* = **ESP32 Dev Module**, *Port* = COM ESP32.
-5. Klik **Upload**.
-6. Buka **Serial Monitor** (115200 baud). Catat baris:
-   ```
-   WiFi OK, IP ESP32 = 192.168.x.y
-   Bob menunggu Alice connect di port 6000...
-   ```
-   **IP itu dipakai Alice.**
+3. Board = **ESP32 Dev Module**, pilih Port, **Upload**.
+4. Buka **Serial Monitor** (115200), catat `IP ESP32`.
 
-> Alternatif `arduino-cli`:
-> ```
-> arduino-cli core install esp32:esp32
-> arduino-cli compile --fqbn esp32:esp32:esp32 bob/bob_esp32
-> arduino-cli upload  --fqbn esp32:esp32:esp32 -p COM_ESP32 bob/bob_esp32
-> arduino-cli monitor -p COM_ESP32 -c baudrate=115200
-> ```
-
-### C. Siapkan Alice (laptop)
-1. Buka `alice/alice.py`, isi IP ESP32 dari Serial Monitor:
-   ```python
-   BOB_IP = "192.168.x.y"   # IP ESP32
-   ALPHA  = 1.0             # HARUS sama dgn bob_esp32.ino
-   ```
+### C. Alice (laptop)
+Edit `kelompokN/alice/alice.py` → `BOB_IP` = IP ESP32. Pastikan `ALPHA` sama (default 1.0).
 
 ### D. Jalankan
-1. Pastikan ESP32 sudah menyala & "menunggu Alice" (langkah B6).
-2. Di laptop:
-   ```
-   cd alice
-   python alice.py
-   ```
-
-### E. Hasil yang benar
-Laptop:
 ```
-Sifting: posisi bersama = 123
-Kunci Alice : 4c032a3015f75237...067ed8
-Kunci Bob   : 4c032a3015f75237...067ed8
+cd kelompokN/alice
+python alice.py
+```
+
+### E. Hasil benar (contoh kelompok 1)
+```
+Kunci Alice : 38ddaa94b772d15a2bbeca1075a3a41a031b23ac
+Kunci Bob   : 38ddaa94b772d15a2bbeca1075a3a41a031b23ac
 Sama?       : YA
 Status      : MATCH
 ```
-Serial Monitor ESP32:
-```
-Rekonsiliasi selesai, query parity = 88
-STATUS: MATCH
-Kunci Bob: 4c032a3015f75237...067ed8
-```
-**Kunci Alice == Kunci Bob → berhasil.**
+Kunci tiap kelompok beda (lihat tabel di atas / `kelompokN/README.md`).
 
 ---
 
 ## 5. Troubleshooting
 
-| Gejala | Penyebab | Solusi |
-|---|---|---|
-| ESP32 cetak titik terus, tak dapat IP | WiFi salah / 5 GHz | Cek SSID/pass, pakai hotspot 2.4 GHz |
-| Alice: `Gagal connect` | IP ESP32 salah / beda WiFi | Samakan WiFi, perbarui `BOB_IP` |
-| Alice diam lama lalu gagal | *client isolation* di WiFi | Pakai hotspot HP |
-| `STATUS: RETRY` | kanal terlalu bising (BER tinggi) | Naikkan `ALPHA` (mis. 1.2) di kedua sisi |
-| Port COM tak kebuka saat upload | Serial Monitor masih terbuka | Tutup Serial Monitor dulu |
+| Gejala | Solusi |
+|---|---|
+| ESP32 cetak titik terus | WiFi salah / 5 GHz → cek SSID/pass, pakai 2.4 GHz |
+| Alice `Gagal connect` | IP ESP32 salah / beda WiFi → samakan WiFi, perbarui `BOB_IP` |
+| Alice menggantung lalu gagal | client isolation → pakai hotspot HP |
+| `STATUS: RETRY` | kanal bising → naikkan `ALPHA` di kedua sisi |
+| Port COM tak terbuka | tutup Serial Monitor sebelum upload |
 
 ---
 
-## 6. Catatan ilmiah (untuk laporan)
+## 6. Untuk instruktur
 
-- **Keamanan**: kunci berasal dari RSSI resiprokal. Yang dikirim publik hanya posisi indeks +
-  parity; nilai RSSI tak pernah dikirim, dan SHA3 (privacy amplification) menghapus parity bocor.
-- **Entropi**: pada dataset Aulia synced + α=1.0 didapat 123 bit bersama, ~35 bit entropi bersih
-  (parity bocor ~88). 256-bit hex itu *format*, bukan entropi. Untuk kunci lebih kuat: gabung
-  beberapa skenario, atau naikkan α, atau pakai data korelasi lebih tinggi.
-- **`ALPHA`**: naik → BER turun & rekonsiliasi murah, tapi jumlah bit turun. Default 1.0 teruji.
-- **Determinisme**: dataset di-embed → kunci sama tiap run (cocok untuk demo & penilaian).
+Regenerasi folder kelompok dari dataset mentah:
 ```
+python tools/build_groups.py
+```
+Ubah daftar `GROUPS` di skrip untuk ganti skenario/kelompok. Template kode ada di
+`tools/template/`. Catatan ilmiah (keamanan, entropi, ALPHA) ada di `docs/praktikum.pdf`.

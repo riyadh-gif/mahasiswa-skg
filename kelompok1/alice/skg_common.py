@@ -5,14 +5,22 @@
 #   1. QUANTISASI guard-band : RSSI -> bit (buang sampel ambigu di tengah)
 #   2. SIFTING                : samakan posisi sampel yang dipakai kedua sisi (tukar INDEKS saja)
 #   3. REKONSILIASI (Cascade) : perbaiki bit beda pakai parity + binary search -> bit jadi identik
-#   4. PRIVACY AMPLIFICATION  : kunci = SHA3-256(bit) -> hapus info parity yang bocor
+#   4. PRIVACY AMPLIFICATION  : kunci = SHA-1(bit) -> hapus info parity yang bocor
 #
 # Keamanan: yang dikirim di kanal publik hanya POSISI indeks + PARITY. Eve tak punya nilai RSSI,
 # dan privacy amplification (hash) menghapus sedikit bit parity yang bocor. Beda dgn versi lama
 # (seed cleartext) -> ini SKG sungguhan.
 
-from sha3_256 import sha3_256_hex
+import hashlib
 from pcg32 import PCG32
+
+
+def sha1_hex(s):
+    """SHA-1 hex. Pakai hashlib standar (Python). Catatan: SHA-1 sudah deprecated/rawan,
+    dipakai di sini untuk tujuan ajar/perbandingan, bukan keamanan produksi."""
+    if isinstance(s, str):
+        s = s.encode()
+    return hashlib.sha1(s).hexdigest()
 
 
 # ---------- 1. QUANTISASI ----------
@@ -96,8 +104,8 @@ def cascade_correct(bits_b, parity_oracle, n, passes=14, k0=4):
 
 # ---------- 4. KUNCI ----------
 def derive_key(bits):
-    """Privacy amplification: kunci akhir = SHA3-256 atas string bit."""
-    return sha3_256_hex("".join(str(b) for b in bits))
+    """Privacy amplification: kunci akhir = SHA-1 atas string bit."""
+    return sha1_hex("".join(str(b) for b in bits))
 
 
 def ber(a, b):
